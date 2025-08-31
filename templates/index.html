@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-header bg-dark text-white">
+    <h1 class="h4 mb-0">画像アップロード</h1>
+  </div>
+  <div class="card-body">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <p class="card-text text-muted">複数の画像ファイルを選択してアップロードできます。</p>
+    <form id="upload-form" method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+      <div class="mb-3">
+        <input class="form-control form-control-lg" type="file" name="image" multiple required>
+      </div>
+      <button id="submit-button" type="submit" class="btn btn-primary w-100 py-2">
+        アップロード
+      </button>
+    </form>
+
+    <!-- プログレスバー（最初は非表示） -->
+    <div id="progress-container" class="mt-3" style="display: none;">
+      <div class="progress" style="height: 25px;">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const form = document.getElementById('upload-form');
+  const submitButton = document.getElementById('submit-button');
+  const progressContainer = document.getElementById('progress-container');
+  const progressBar = document.getElementById('progress-bar');
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault(); // 通常のフォーム送信をキャンセル
+
+    const formData = new FormData(form);
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('POST', form.action, true);
+
+    // UIを更新: プログレスバーを表示し、ボタンを無効化
+    progressContainer.style.display = 'block';
+    submitButton.disabled = true;
+    submitButton.textContent = 'アップロード中...';
+
+    // 進捗イベントを監視
+    xhr.upload.addEventListener('progress', function(e) {
+      if (e.lengthComputable) {
+        const percentComplete = Math.round((e.loaded / e.total) * 100);
+        progressBar.style.width = percentComplete + '%';
+        progressBar.setAttribute('aria-valuenow', percentComplete);
+        progressBar.textContent = percentComplete + '%';
+      }
+    });
+
+    // アップロード完了時の処理
+    xhr.addEventListener('load', function() {
+      if (xhr.status === 200) {
+        // 成功したら、返ってきたHTMLでページ全体を書き換える
+        document.body.innerHTML = xhr.responseText;
+      } else {
+        alert('アップロードに失敗しました。');
+        // UIを元に戻す
+        progressContainer.style.display = 'none';
+        submitButton.disabled = false;
+        submitButton.textContent = 'アップロード';
+      }
+    });
+
+    // リクエストを送信
+    xhr.send(formData);
+  });
+</script>
+{% endblock %}
